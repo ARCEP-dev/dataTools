@@ -1,10 +1,9 @@
 #!python2
-# Romain MAZIERE (ARCEP) 2017-08-17
 # Workflow to clean, split and standardize coverage shapefiles
 # Need Python 2.7 and ArcPy
 
 import arcpy, logging, sys
-from os import path, sep, makedirs, removedirs
+from os import path, sep, makedirs, removedirs, getpid, listdir, remove
 from datetime import date, datetime
 from shutil import copy, rmtree
 
@@ -268,6 +267,9 @@ while (loopQuestion.lower() != "n"):
   
   # Create directories
   dirCreator(tempDataPath)
+  # Create a lock file to prevent tempDataPath deletion by another instance
+  lockerFile = tempDataPath + sep + str(getpid()) + ".lock"
+  open(lockerFile, 'a').close
   
   if path.isfile(inputDataPath) and (inputDataPath.split(".")[-1] == "shp") :
     globalWorkflow(inputDataPath)
@@ -275,7 +277,16 @@ while (loopQuestion.lower() != "n"):
     print("Error ! Only process ShapeFile !")
     exit()
   
-  dirDeletor(tempDataPath)
+  # Remove the lock file
+  remove(lockerFile)
+  length = 0
+  for f in listdir(tempDataPath):
+      if(f.endswith('.' + 'lock')): length+=1
+  if(length == 0):
+    logger.debug(tempDataPath + " deleted.")
+    dirDeletor(tempDataPath)
+  else:
+    logger.warning("There is another processing !")
   
   logging.info("The global process duration is : " + str(duration(beginDateTime)))
   fileCopier(fileLogPath, outputPath)
