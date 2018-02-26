@@ -1,3 +1,4 @@
+#!python2
 # Romain MAZIERE (ARCEP) 2017-08-17
 # Workflow to clean, split and standardize coverage shapefiles
 # Need Python 2.7 and ArcPy
@@ -6,6 +7,8 @@ import arcpy, logging, sys
 from os import path, sep, makedirs, removedirs
 from datetime import date, datetime
 from shutil import copy, rmtree
+
+arcpy.env.overwriteOutput = True #overwrite existing files
 
 def duration(dateTime):
   deltaTime = (datetime.now() - dateTime)
@@ -42,6 +45,7 @@ def fileCopier(inputFilePath, outputFilePath):
   
 def shpCopy(inputFilePath, outputFilePath):
   logger.info("Copy shapefile")
+  logger.info(outputFilePath)
   arcpy.CopyFeatures_management(inputFilePath, outputFilePath)
   logger.info("The copy is : " + outputFilePath)
   
@@ -105,9 +109,9 @@ def merge(inputPath, outputPath):
 def split(inputPath, outputPath, choice):
   dateTime = datetime.now()
   logger.info("Split the shape")
-  country_shp = "C:\Travail\Work\France_2016-06-00235.shp" # 0
-  department_shp = "C:\Travail\Work\Departement_2016-06-00235.shp" # 1
-  city_shp = "C:\Travail\Work\Commune_2016-06-00236.shp" # 2
+  country_shp = "" # 0
+  department_shp = "C:\sig\\ressources\\ign\\2017\\admin_express\\ADE-COG_1-0_SHP_LAMB93_FR\\DEPARTEMENT.shp" # 1
+  city_shp = "" # 2
   
   outputFilename = nameModify(inputPath, "splitByDept")
   split_shp = department_shp
@@ -138,7 +142,7 @@ def deleteAllFields(inputFilename):
   dateTime = datetime.now()
   fields = arcpy.ListFields(inputFilename)
   logger.debug("Nbr of Fields : " + str(len(fields)))
-  requiredFields = ["operateur", "date", "techno", "usage", "niveau", "bande", "dept", "ID_GEOFLA", "CODE_DEPT", "NOM_DEPT", "CODE_REG", "NOM_REG", "LEGENDE", "LEGEND"]
+  requiredFields = ["operateur", "date", "techno", "usage", "niveau", "bande", "dept", "ID_GEOFLA", "CODE_DEPT", "NOM_DEPT", "CODE_REG", "NOM_REG", "LEGENDE", "LEGEND", "NOM_DEP", "INSEE_DEP", "INSEE_REG"]
   nbrOfFields = len(fields)
   if (nbrOfFields <= 3):
     return 0
@@ -232,7 +236,7 @@ while (loopQuestion.lower() != "n"):
   fileLog.setFormatter(formatter)
   logger.addHandler(fileLog)
 
-  # Ask all paths
+  # input Data Path
   if(len(sys.argv) >= 2):
     inputDataPath = sys.argv[1]
   else:
@@ -240,18 +244,23 @@ while (loopQuestion.lower() != "n"):
   logger.debug("Shapefile : " + inputDataPath)
   outputPath = path.dirname(inputDataPath) + sep
   outputFilenameBase = path.basename(inputDataPath).replace("." + inputDataPath.split(".")[-1], "")
+  logger.info("The oututPath is : " + outputPath)
+  logger.info("The output file name base is : " + outputFilenameBase)
   logger.info("The shapefile is in " + checkFileSRID(inputDataPath))
-  if(len(sys.argv) == 1):
+  
+  # Temp dir
+  if(len(sys.argv) < 3):
     tempDataPath = raw_input("Enter the temp path on your local drive [C:\Temp\dataProcessing\](default) : ")
   elif(len(sys.argv) >= 3):
     tempDataPath = sys.argv[2]
-  else:
+  if(tempDataPath == ''):
     tempDataPath = "C:\\Temp" + sep + "dataProcessing" + sep
+  print("tempDataPath : " + tempDataPath)
   
   if(not path.exists(tempDataPath)):
     dirCreator(tempDataPath)
   elif(path.exists(tempDataPath)):
-    print(tempDataPath + " allready exists.")
+    print(tempDataPath + " already exists.")
   else:
     print("Error ! The temp dir : " + tempDataPath + " is not valid !")
     exit()
